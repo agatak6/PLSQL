@@ -1,0 +1,94 @@
+/*Example Scenario
+Let's say we have two tables:
+
+employees (from which we will select data)
+employees_backup (into which we will insert the selected data)
+Table Structure
+Assume both tables have the following structure:*/
+
+CREATE TABLE employees (
+    employee_id NUMBER,
+    first_name VARCHAR2(50),
+    last_name VARCHAR2(50),
+    salary NUMBER
+);
+
+CREATE TABLE employees_backup (
+    employee_id NUMBER,
+    first_name VARCHAR2(50),
+    last_name VARCHAR2(50),
+    salary NUMBER
+);
+
+/*PL/SQL Code Using BULK COLLECT
+Here’s a PL/SQL block that uses BULK COLLECT to insert data from the employees table into the employees_backup table.*/
+
+DECLARE
+    TYPE r_emp_type IS RECORD (
+        employee_id NUMBER,
+        first_name VARCHAR2(50),
+        last_name VARCHAR2(50),
+        salary NUMBER
+    );
+
+    TYPE t_emp_type IS TABLE OF r_emp_type;
+    l_employees t_emp_type;
+
+    -- Define a named cursor
+    CURSOR c_get_employees IS
+        SELECT employee_id, first_name, last_name, salary
+        FROM employees;
+
+    l_bulk_collect_limit number := 1000;    
+
+BEGIN
+    -- Open the cursor and fetch data using BULK COLLECT
+    OPEN c_get_employees;
+    LOOP
+        FETCH c_get_employees BULK COLLECT INTO l_employees LIMIT 100; -- Fetch in batches of l_bulk_collect_limit
+        EXIT WHEN l_employees.COUNT = 0; -- Exit when no more data is fetched
+
+    -- Insert data into employees_backup table
+    FORALL i IN 1 .. l_employees.COUNT
+        INSERT INTO employees_backup (employee_id, 
+                                      first_name, 
+                                      last_name, 
+                                      salary)
+        VALUES (l_employees(i).employee_id, 
+                l_employees(i).first_name, 
+                l_employees(i).last_name, 
+                l_employees(i).salary);
+
+        COMMIT;
+    END LOOP;
+
+    -- Close the cursor
+    CLOSE c_get_employees;
+
+    -- Optional: Commit the transaction
+    COMMIT;
+
+    DBMS_OUTPUT.PUT_LINE(l_employees.COUNT || ' records inserted into employees_backup.');
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_get_employees%ISOPEN THEN
+            CLOSE c_get_employees; -- Make sure to close the cursor in case of an error
+        END IF;
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+
+/*
+Explanation
+Type Declaration: We declare a record type r_emp_type and a table type t_emp_type to hold the fetched employee data.
+BULK COLLECT: We use the BULK COLLECT INTO clause to fetch all rows from the employees table into the l_employees collection.
+FORALL Statement: The FORALL statement is used to bulk insert the data from the collection into the employees_backup table. This method is more efficient than inserting rows one at a time.
+Error Handling: We catch any exceptions that may occur during execution and roll back the transaction if an error happens.
+This example illustrates how to effectively use BULK COLLECT in PL/SQL to improve performance when dealing with multiple records.
+*/
+
+
+
+
+
+
