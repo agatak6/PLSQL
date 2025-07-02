@@ -23,7 +23,10 @@ CREATE TABLE employees_backup (
 /*PL/SQL Code Using BULK COLLECT
 Here’s a PL/SQL block that uses BULK COLLECT to insert data from the employees table into the employees_backup table.*/
 
-DECLARE
+----------------------------------------------------------------------------------
+
+procedure p_insert_employees is
+
     TYPE r_emp_type IS RECORD (
         employee_id NUMBER,
         first_name VARCHAR2(50),
@@ -76,7 +79,8 @@ EXCEPTION
         END IF;
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
-END;
+END p_insert_employees;
+----------------------------------------------------------------------------------
 
 /*
 Explanation
