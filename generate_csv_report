@@ -1,0 +1,58 @@
+DECLARE
+
+    -- Define a named cursor
+    CURSOR c_report IS
+        SELECT column1, column2, column3 
+        FROM your_table;  -- Adjust this query as needed
+    
+    l_directory VARCHAR2(2200) := 'YOUR_DIRECTORY'; -- Define the directory object
+    l_out_file UTL_FILE.FILE_TYPE;     -- Define a file handle
+    l_spool_file_name varchar2(100) := to_char(sysdate, 'YYYY-MM-DD') || '_report.csv';
+
+    -- Define a variable for the line output
+    v_line VARCHAR2(4000);
+    
+BEGIN
+    -- Open the file for writing
+    l_out_file := UTL_FILE.FOPEN(l_directory, l_spool_file_name, 'W');
+
+    --Write module name, report creation date and report name
+    UTL_FILE.PUT_LINE(l_out_file, ',Module name, module_name,,');
+    UTL_FILE.PUT_LINE(l_out_file, ',Report Created Date, to_char(sysdate, 'YYYY-MM-DD'),,');
+    UTL_FILE.PUT_LINE(l_out_file, ',Report name, report_name,,');
+
+    -- Write the header line to the CSV
+    UTL_FILE.PUT_LINE(l_out_file, 'Column1,Column2,Column3');
+
+    -- Use the named cursor to fetch data
+    open c_report;
+    LOOP
+    FETCH c_report into r_report;
+    if c_report%not_found then
+      UTL_FILE.PUT_LINE(l_out_file, '');
+    exit;
+    else
+      UTL_FILE.PUT_LINE(
+      l_out_file,
+         r_report.column1
+      || ','
+      || r_report.column2
+      || ','
+      || '"'||to_char(nvl(r_report.column3,0),'fm99999999999.90')||'"'
+      );
+    end if;
+    end loop;
+    close c_report;
+
+    -- Close the file
+    UTL_FILE.FCLOSE(l_out_file);
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Make sure to close the file if an error occurs
+        IF UTL_FILE.IS_OPEN(l_out_file) THEN
+            UTL_FILE.FCLOSE(l_out_file);
+        END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
